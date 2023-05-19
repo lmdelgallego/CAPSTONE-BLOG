@@ -1,12 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for
-from flask_wtf import FlaskForm
 from flask_sqlalchemy import SQLAlchemy
+from flask_ckeditor import CKEditor
+from flask_bootstrap import Bootstrap
+from datetime import date
 import requests
+from Post import CreatePostForm
 from Blog import Blog
 from LoginForm import LoginForm
 
-app = Flask(__name__)
 
+app = Flask(__name__)
+ckeditor = CKEditor(app)
+Bootstrap(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///posts.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
@@ -15,7 +20,8 @@ app.secret_key = "secret"
 blog = Blog()
 
 
-##CONFIGURE TABLE
+# #CONFIGURE TABLE
+
 class BlogPost(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(250), unique=True, nullable=False)
@@ -26,7 +32,8 @@ class BlogPost(db.Model):
     img_url = db.Column(db.String(250), nullable=False)
 
     def __repr__(self):
-        '<Post {self.title}>'
+        """<Post {self.title}>"""
+
 
 with app.app_context():
     db.create_all()
@@ -37,10 +44,30 @@ def home():
     blog.getAllPost(BlogPost)
     return render_template("index.html", all_posts=blog.all_post)
 
+
 @app.route("/post/<id>")
 def get_post(id):
     post_data = blog.getPost(BlogPost, id)
     return render_template("post.html", post_data=post_data)
+
+
+@app.route("/new-post", methods=["GET", "POST"])
+def add_new_post():
+    form = CreatePostForm()
+    if form.validate_on_submit():
+        new_post = BlogPost(
+            title=form.title.data,
+            date=date.today().strftime("%B %d, %Y"),
+            subtitle=form.subtitle.data,
+            body=form.body.data,
+            img_url=form.img_url.data,
+            author=form.author.data,
+        )
+        db.session.add(new_post)
+        db.session.commit()
+        return redirect(url_for("home"))
+
+    return render_template("make-post.html", form=form)
 
 
 @app.route("/about")
@@ -67,13 +94,14 @@ def guess(name):
         "guess.html", person_name=name, person_gender=gender, person_age=age
     )
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     login_form = LoginForm()
     if login_form.validate_on_submit():
         if (
-            login_form.email.data == "admin@gmail.com"
-            and login_form.password.data == "password"
+                login_form.email.data == "admin@gmail.com"
+                and login_form.password.data == "password"
         ):
             return redirect("/")
         else:
