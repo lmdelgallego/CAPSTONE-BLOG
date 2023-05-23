@@ -19,7 +19,7 @@
             {% for post in all_posts %}
             <!-- Post preview-->
             <div class="post-preview">
-                <a href="{{ url_for('get_post',id=post['id']) }}">
+                <a href="{{ url_for('get_post',post_id=post['id']) }}">
                     <h2 class="post-title">{{post['title']}}</h2>
                     <h3 class="post-subtitle">{{post["subtitle"]}}</h3>
                 </a>

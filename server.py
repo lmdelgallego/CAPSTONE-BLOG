@@ -41,14 +41,38 @@ with app.app_context():
 
 @app.route("/")
 def home():
-    blog.getAllPost(BlogPost)
-    return render_template("index.html", all_posts=blog.all_post)
+    posts = BlogPost.query.all()
+    return render_template("index.html", all_posts=posts)
 
 
-@app.route("/post/<id>")
-def get_post(id):
-    post_data = blog.getPost(BlogPost, id)
+@app.route("/post/<post_id>")
+def get_post(post_id):
+    # post_data = blog.getPost(BlogPost, id)
+    post_data = BlogPost.query.get(post_id)
     return render_template("post.html", post_data=post_data)
+
+
+@app.route("/edit-post/<post_id>", methods=["GET", "POST"])
+def edit_post(post_id):
+    post = BlogPost.query.get(post_id)
+    form = CreatePostForm(
+        title=post.title,
+        subtitle=post.subtitle,
+        body=post.body,
+        img_url=post.img_url,
+        author=post.author,
+    )
+
+    if form.validate_on_submit():
+        post.title = form.title.data
+        post.subtitle = form.subtitle.data
+        post.body = form.body.data
+        post.img_url = form.img_url.data
+        post.author = form.author.data
+        db.session.commit()
+        return redirect(url_for('home'))
+
+    return render_template("make-post.html", form=form, is_edit=True)
 
 
 @app.route("/new-post", methods=["GET", "POST"])
