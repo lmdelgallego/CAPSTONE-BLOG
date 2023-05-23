@@ -94,6 +94,14 @@ def add_new_post():
     return render_template("make-post.html", form=form)
 
 
+@app.route("/delete/<int:post_id>")
+def delete_post(post_id):
+    post_to_delete = BlogPost.query.get(post_id)
+    db.session.delete(post_to_delete)
+    db.session.commit()
+    return redirect(url_for('home'))
+
+
 @app.route("/about")
 def about():
     return render_template("about.html")
