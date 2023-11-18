@@ -4,10 +4,12 @@ from flask_ckeditor import CKEditor
 from flask_bootstrap import Bootstrap
 from datetime import date
 import requests
+from werkzeug.security import generate_password_hash
+
 from Post import CreatePostForm
 from Blog import Blog
 from LoginForm import LoginForm
-
+from RegisterForm import RegisterForm
 
 app = Flask(__name__)
 ckeditor = CKEditor(app)
@@ -33,6 +35,14 @@ class BlogPost(db.Model):
 
     def __repr__(self):
         """<Post {self.title}>"""
+
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(250), unique=True)
+    password = db.Column(db.String(250))
+    name = db.Column(db.String(250))
+    createdAt = db.Column(db.String(250), nullable=False)
 
 
 with app.app_context():
@@ -139,6 +149,27 @@ def login():
         else:
             return render_template("denied.html")
     return render_template("login.html", form=login_form)
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    register_form = RegisterForm()
+    if register_form.validate_on_submit():
+        hash_and_salted_password = generate_password_hash(
+            register_form.password.data,
+            method='pbkdf2:sha256',
+            salt_length=8
+        )
+        new_user = User(
+            email=register_form.email.data,
+            password=hash_and_salted_password,
+            name=register_form.name.data,
+            createdAt=date.today().strftime("%B %d, %Y"),
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        return redirect("/")
+    return render_template("register.html", form=register_form)
 
 
 @app.route("/form-entry", methods=["POST"])

@@ -1,0 +1,52 @@
+{%include "header.html" %}
+
+<!-- Page Header -->
+<header
+  class="masthead"
+  style="background-image: url('../static/img/register-bg.jpg')"
+>
+  <div class="container position-relative px-4 px-lg-5">
+    <div class="row gx-4 gx-lg-5 justify-content-center">
+      <div class="col-md-10 col-lg-8 col-xl-7">
+        <div class="page-heading">
+          <h1>Register</h1>
+          <span class="subheading">Start Contributing to the Blog!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container px-4 px-lg-5">
+  <div class="container">
+    <div class="row gx-4 gx-lg-5 justify-content-center">
+      <div class="col-md-10 col-lg-8 col-xl-7 mb-4">
+        <!--TODO: render your registration form here-->
+        <form action="{{url_for('register')}}" method="POST" enctype="multipart/form-data" class="form-horizontal" novalidate >
+          {{ form.csrf_token }}
+          <p>
+            {{form.email.label}} <br/>{{form.email(size=30)}}
+            {% for err in form.email.errors %}
+              <span style="color: red;">{{ err }}</span>
+            {% endfor %}
+          </p>
+          <p>
+            {{ form.password.label }} <br/> {{ form.password(size=30)}}
+            {% for err in form.password.errors %}
+              <span style="color: red;">{{ err }}</span>
+            {% endfor %}
+          </p>
+          <p>
+              {{ form.name.label }} <br/> {{ form.name(size=30)}}
+              {% for err in form.name.errors %}
+              <span style="color: red;">{{ err }}</span>
+              {% endfor %}
+          </p>
+          {{ form.submit() }}
+        </form>
+      </div>
+    </div>
+  </div>
+</main>
+
+{% include "footer.html" %}
