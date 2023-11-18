@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask_bootstrap import Bootstrap5
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_ckeditor import CKEditor
-from flask_bootstrap import Bootstrap
 from datetime import date
 import requests
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager
 
 from Post import CreatePostForm
 from Blog import Blog
@@ -13,7 +14,18 @@ from RegisterForm import RegisterForm
 
 app = Flask(__name__)
 ckeditor = CKEditor(app)
-Bootstrap(app)
+bootstrap = Bootstrap5(app)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+
+@login_manager.user_loader
+def load_user(user):
+    print(db.get_or_404(User, user.id))
+    return db.get_or_404(User, user.id)
+
+
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///posts.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
@@ -141,13 +153,16 @@ def guess(name):
 def login():
     login_form = LoginForm()
     if login_form.validate_on_submit():
-        if (
-                login_form.email.data == "admin@gmail.com"
-                and login_form.password.data == "password"
-        ):
+        email = login_form.email.data
+        password = login_form.password.data
+        result = db.session.execute(db.select(User).where(User.email == email))
+        user = result.scalar()
+        if user and check_password_hash(user.password, password):
+            load_user(user)
             return redirect("/")
         else:
-            return render_template("denied.html")
+            flash("Invalid credentials", "danger")
+            return redirect(url_for("login"))
     return render_template("login.html", form=login_form)
 
 
@@ -168,6 +183,7 @@ def register():
         )
         db.session.add(new_user)
         db.session.commit()
+        load_user(new_user)
         return redirect("/")
     return render_template("register.html", form=register_form)
 
