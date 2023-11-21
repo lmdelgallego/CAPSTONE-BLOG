@@ -1,11 +1,12 @@
+from functools import wraps
 from flask_bootstrap import Bootstrap5
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_ckeditor import CKEditor
 from datetime import date
 import requests
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user
+from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user, login_required
 
 from Post import CreatePostForm
 from Blog import Blog
@@ -34,8 +35,16 @@ app.secret_key = "secret"
 blog = Blog()
 
 
-# #CONFIGURE TABLE
+def admin_only(func):
+    @wraps(func)
+    def decorated_function( *args, **kwargs ):
+        if current_user.id != 1:
+            return abort(403)
+        return func(*args, **kwargs )
 
+    return decorated_function
+
+# #CONFIGURE TABLE
 class BlogPost(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(250), unique=True, nullable=False)
@@ -75,6 +84,7 @@ def get_post(post_id):
 
 
 @app.route("/edit-post/<post_id>", methods=["GET", "POST"])
+@admin_only
 def edit_post(post_id):
     post = BlogPost.query.get(post_id)
     form = CreatePostForm(
@@ -98,6 +108,7 @@ def edit_post(post_id):
 
 
 @app.route("/new-post", methods=["GET", "POST"])
+@admin_only
 def add_new_post():
     form = CreatePostForm()
     if form.validate_on_submit():
@@ -117,6 +128,7 @@ def add_new_post():
 
 
 @app.route("/delete/<int:post_id>")
+@admin_only
 def delete_post(post_id):
     post_to_delete = BlogPost.query.get(post_id)
     db.session.delete(post_to_delete)
