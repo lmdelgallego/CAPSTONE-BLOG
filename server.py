@@ -5,7 +5,7 @@ from flask_ckeditor import CKEditor
 from datetime import date
 import requests
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import LoginManager
+from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user
 
 from Post import CreatePostForm
 from Blog import Blog
@@ -16,14 +16,14 @@ app = Flask(__name__)
 ckeditor = CKEditor(app)
 bootstrap = Bootstrap5(app)
 
+# Configure Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 
 
 @login_manager.user_loader
-def load_user(user):
-    print(db.get_or_404(User, user.id))
-    return db.get_or_404(User, user.id)
+def load_user(user_id):
+    return db.get_or_404(User, user_id)
 
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///posts.db"
@@ -49,12 +49,12 @@ class BlogPost(db.Model):
         """<Post {self.title}>"""
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(250), unique=True)
     password = db.Column(db.String(250))
     name = db.Column(db.String(250))
-    createdAt = db.Column(db.String(250), nullable=False)
 
 
 with app.app_context():
@@ -158,8 +158,8 @@ def login():
         result = db.session.execute(db.select(User).where(User.email == email))
         user = result.scalar()
         if user and check_password_hash(user.password, password):
-            load_user(user)
-            return redirect("/")
+            login_user(user)
+            return redirect(url_for("home"))
         else:
             flash("Invalid credentials", "danger")
             return redirect(url_for("login"))
@@ -168,24 +168,33 @@ def login():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    register_form = RegisterForm()
-    if register_form.validate_on_submit():
+    form = RegisterForm()
+    if form.validate_on_submit():
+
+        result = db.session.execute(db.select(User).where(User.email == form.email.data))
+        user = result.scalar()
+        if user:
+            flash("You've already signed up with that email, log in instead!", "danger")
+            return redirect(url_for("login"))
+
         hash_and_salted_password = generate_password_hash(
-            register_form.password.data,
+            form.password.data,
             method='pbkdf2:sha256',
             salt_length=8
         )
+
         new_user = User(
-            email=register_form.email.data,
+            email=form.email.data,
             password=hash_and_salted_password,
-            name=register_form.name.data,
-            createdAt=date.today().strftime("%B %d, %Y"),
+            name=form.name.data,
         )
+
         db.session.add(new_user)
         db.session.commit()
-        load_user(new_user)
-        return redirect("/")
-    return render_template("register.html", form=register_form)
+        login_user(new_user)
+        return redirect(url_for('home'))
+
+    return render_template("register.html", form=form)
 
 
 @app.route("/form-entry", methods=["POST"])
@@ -197,6 +206,12 @@ def receive_data():
     message = data.get("message")
     print(name, email, phone, message)
     return "<h1>Successfully sent your message</h1>"
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('home'))
 
 
 if __name__ == "__main__":
