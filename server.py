@@ -7,6 +7,7 @@ from datetime import date
 import requests
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user, login_required
+from sqlalchemy.orm import relationship
 
 from Post import CreatePostForm
 from Blog import Blog
@@ -37,22 +38,26 @@ blog = Blog()
 
 def admin_only(func):
     @wraps(func)
-    def decorated_function( *args, **kwargs ):
+    def decorated_function(*args, **kwargs):
         if current_user.id != 1:
             return abort(403)
-        return func(*args, **kwargs )
+        return func(*args, **kwargs)
 
     return decorated_function
 
+
 # #CONFIGURE TABLE
 class BlogPost(db.Model):
+    __tablename__ = "blog_post"
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(250), unique=True, nullable=False)
     subtitle = db.Column(db.String(250), nullable=False)
     date = db.Column(db.String(250), nullable=False)
     body = db.Column(db.Text, nullable=False)
-    author = db.Column(db.String(250), nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
+
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    author = relationship("User", back_populates="posts")
 
     def __repr__(self):
         """<Post {self.title}>"""
@@ -64,6 +69,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(250), unique=True)
     password = db.Column(db.String(250))
     name = db.Column(db.String(250))
+    posts = relationship("BlogPost", back_populates="author")
 
 
 with app.app_context():
@@ -118,7 +124,7 @@ def add_new_post():
             subtitle=form.subtitle.data,
             body=form.body.data,
             img_url=form.img_url.data,
-            author=form.author.data,
+            author=current_user,
         )
         db.session.add(new_post)
         db.session.commit()
