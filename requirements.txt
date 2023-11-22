@@ -3,7 +3,7 @@ certifi==2023.11.17
 charset-normalizer==3.3.2
 click==8.1.7
 dominate==2.9.0
-email-validator==2.1.0.post1
+email-validator==2.1.0
 Flask==2.3.2
 Flask-Bootstrap==3.3.7.1
 Flask-CKEditor==0.4.6
