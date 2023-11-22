@@ -1,3 +1,4 @@
+{% from "bootstrap5/form.html" import render_form %}
 {% include 'header.html' %}
 <!-- Page Header-->
 <header class="masthead" style="background-image: url({{post_data.img_url}})">
@@ -31,5 +32,36 @@
         {% endif %}
       </div>
   </div>
+    <div class="comment">
+      <ul class="commentList">
+        <!-- Show all comments -->
+        {% for comment in post_data.comments: %}
+        <li>
+          <div class="commenterImage">
+              <div class="commenterImage">
+                <img
+                  src="{{ comment.comment_author.email | gravatar }}"
+                />
+              </div>
+          </div>
+          <div class="commentText">
+            {{comment.text|safe}}
+            <span class="sub-text">{{comment.comment_author.name}}</span>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+
+    </div>
+<!-- Comments Form-->
+    {% if current_user.is_authenticated: %}
+    <hr>
+    {{ckeditor.load()}}
+    {{ckeditor.config(name="comment_text")}}
+    {{ render_form(form, novalidate=True, button_map={'submit': 'primary'}) }}
+    {% endif %}
+
+
+
 </div>
 {% include 'footer.html' %}

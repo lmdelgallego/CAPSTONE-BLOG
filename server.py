@@ -1,4 +1,5 @@
 from functools import wraps
+from flask_gravatar import Gravatar
 from flask_bootstrap import Bootstrap5
 from flask import Flask, render_template, request, redirect, url_for, flash, abort
 from flask_sqlalchemy import SQLAlchemy
@@ -13,6 +14,7 @@ from Post import CreatePostForm
 from Blog import Blog
 from LoginForm import LoginForm
 from RegisterForm import RegisterForm
+from Comment import CommentForm
 
 app = Flask(__name__)
 ckeditor = CKEditor(app)
@@ -34,6 +36,15 @@ db = SQLAlchemy(app)
 
 app.secret_key = "secret"
 blog = Blog()
+
+gravatar = Gravatar(app,
+                    size=100,
+                    rating='g',
+                    default='retro',
+                    force_default=False,
+                    force_lower=False,
+                    use_ssl=False,
+                    base_url=None)
 
 
 def admin_only(func):
@@ -58,6 +69,7 @@ class BlogPost(db.Model):
 
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     author = relationship("User", back_populates="posts")
+    comments = relationship("Comment", back_populates="parent_post")
 
     def __repr__(self):
         """<Post {self.title}>"""
@@ -70,6 +82,17 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(250))
     name = db.Column(db.String(250))
     posts = relationship("BlogPost", back_populates="author")
+    comments = relationship("Comment", back_populates="comment_author")
+
+
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.String(250))
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    comment_author = relationship("User", back_populates="comments")
+    post_id = db.Column(db.Integer, db.ForeignKey("blog_post.id"))
+    parent_post = relationship("BlogPost", back_populates="comments")
 
 
 with app.app_context():
@@ -82,11 +105,21 @@ def home():
     return render_template("index.html", all_posts=posts)
 
 
-@app.route("/post/<post_id>")
+@app.route("/post/<post_id>", methods=["GET", "POST"])
 def get_post(post_id):
     # post_data = blog.getPost(BlogPost, id)
     post_data = BlogPost.query.get(post_id)
-    return render_template("post.html", post_data=post_data)
+    form_comment = CommentForm()
+    if(form_comment.validate_on_submit()):
+        new_comment = Comment(
+            text=form_comment.comment.data,
+            author_id=current_user.id,
+            post_id=post_id
+        )
+        db.session.add(new_comment)
+        db.session.commit()
+        return redirect(url_for('get_post', post_id=post_id))
+    return render_template("post.html", post_data=post_data, form=form_comment)
 
 
 @app.route("/edit-post/<post_id>", methods=["GET", "POST"])
