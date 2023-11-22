@@ -1,3 +1,4 @@
+import os
 from functools import wraps
 from flask_gravatar import Gravatar
 from flask_bootstrap import Bootstrap5
@@ -29,12 +30,12 @@ login_manager.init_app(app)
 def load_user(user_id):
     return db.get_or_404(User, user_id)
 
-
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///posts.db"
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DB_URI", "sqlite:///posts.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
-app.secret_key = "secret"
+app.secret_key = os.environ.get("SECRET_KEY", "secret")
 blog = Blog()
 
 gravatar = Gravatar(app,
@@ -266,4 +267,4 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
